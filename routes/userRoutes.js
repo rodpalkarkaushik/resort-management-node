@@ -1,9 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-// Dashboard
-router.get("/dashboard", (req, res) => {
-  res.render("dashboard");
+router.get("/", (req, res) => {
+  res.send("User route working");
 });
 
-module.exports = router;
+module.exports = router;   // 🔴 REQUIRED

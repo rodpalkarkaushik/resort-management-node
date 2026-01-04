@@ -1,33 +1,29 @@
 const express = require("express");
-const app = express();
-const path = require("path");
 require("dotenv").config();
 
-// Middleware
+const app = express();
+
+// middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// EJS setup
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
 
-// ROUTES (THIS WAS MISSING)
+// routes
 const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
 
-// Mount routes
 app.use("/", authRoutes);
-app.use("/", userRoutes);
-app.use("/", adminRoutes);
+app.use("/admin", adminRoutes);
+app.use("/user", userRoutes);
 
-// Test route
+// test route
 app.get("/", (req, res) => {
-  res.send("Resort Management Backend is Live 🚀");
+  res.send("Server is running ✅");
 });
 
-// Port
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
