@@ -43,10 +43,9 @@ app.get("/health", (req, res) => {
 // =========================
 app.get("/db-test", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT 1");
+    const [rows] = await db.query("SELECT 1 AS result");
     res.json({
       status: "SUCCESS",
-      message: "Database connected successfully",
       result: rows
     });
   } catch (err) {
@@ -56,6 +55,7 @@ app.get("/db-test", async (req, res) => {
     });
   }
 });
+
 
 // =========================
 // HOME ROUTE (OPTIONAL)
