@@ -1,15 +1,20 @@
-require("dotenv").config();
-const express = require("express");
-const db = require("./config/db");
+app.set("view engine", "ejs");
+app.set("views", "views");
 
-const app = express();
-app.use(express.json());
-
+// Test route (already working)
 app.get("/", (req, res) => {
-  res.send("Resort Management System is running 🚀");
+  res.send("Resort Management Backend is Live 🚀");
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+// Page routes
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+app.get("/register", (req, res) => {
+  res.render("register");
+});
+
+app.get("/dashboard", (req, res) => {
+  res.render("dashboard");
 });
