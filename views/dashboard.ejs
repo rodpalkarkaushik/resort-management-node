@@ -1,13 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Dashboard</title>
+  <title>User Dashboard</title>
 </head>
 <body>
+
   <h2>Welcome, <%= username %> 🎉</h2>
-
-  <p>You are logged in successfully.</p>
-
   <a href="/logout">Logout</a>
+
+  <hr>
+
+  <h3>Available Resorts</h3>
+
+  <% if (resorts.length === 0) { %>
+    <p>No resorts available</p>
+  <% } %>
+
+  <% resorts.forEach(resort => { %>
+    <div style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+      <h4><%= resort.name %></h4>
+
+      <img src="<%= resort.image_url %>" width="250">
+
+      <p><strong>Price:</strong> ₹<%= resort.price %></p>
+      <p><strong>Address:</strong> <%= resort.address %></p>
+      <p><strong>Contact:</strong> <%= resort.contact %></p>
+    </div>
+  <% }) %>
+
 </body>
 </html>

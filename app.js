@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
 const { Pool } = require("pg");
-const adminRoutes = require("./routes/adminRoutes");
+
 dotenv.config();
 const app = express();
 
@@ -28,13 +28,13 @@ app.use(
       pool: pool,
       tableName: "session"
     }),
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || "secret123",
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false }
   })
 );
-app.use("/", adminRoutes);
+
 /* =========================
    VIEW ENGINE
 ========================= */
@@ -71,13 +71,13 @@ app.post("/register", async (req, res) => {
     }
 
     await pool.query(
-      "INSERT INTO users (username, password, role) VALUES ($1, $2, $3)",
-      [username, password, "user"]
+      "INSERT INTO users (username, password, role) VALUES ($1, $2, 'user')",
+      [username, password]
     );
 
     res.redirect("/login");
   } catch (err) {
-    console.error("REGISTER ERROR:", err.message);
+    console.error("REGISTER ERROR:", err);
     res.render("register", { error: "Server error" });
   }
 });
@@ -117,30 +117,51 @@ app.post("/login", async (req, res) => {
       : res.redirect("/dashboard");
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err.message);
+    console.error("LOGIN ERROR:", err);
     res.render("login", { error: "Login failed" });
   }
 });
 
 /* =========================
-   DASHBOARDS
+   USER DASHBOARD (VIEW RESORTS)
 ========================= */
-app.get("/dashboard", (req, res) => {
+app.get("/dashboard", async (req, res) => {
   if (!req.session.userId || req.session.role !== "user") {
     return res.redirect("/login");
   }
-  res.render("dashboard", { username: req.session.username });
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM resorts ORDER BY id DESC"
+    );
+
+    res.render("dashboard", {
+      username: req.session.username,
+      resorts: result.rows
+    });
+
+  } catch (err) {
+    console.error("USER DASHBOARD ERROR:", err);
+    res.send("Error loading resorts");
+  }
 });
 
-app.get("/admin/dashboard", (req, res) => {
+/* =========================
+   ADMIN DASHBOARD
+========================= */
+app.get("/admin/dashboard", async (req, res) => {
   if (!req.session.userId || req.session.role !== "admin") {
     return res.redirect("/login");
   }
-  res.render("adminDashboard", { username: req.session.username });
-});
-app.get("/resorts", async (req, res) => {
-  const result = await db.query("SELECT * FROM resorts ORDER BY id DESC");
-  res.render("userResorts", { resorts: result.rows });
+
+  const result = await pool.query(
+    "SELECT * FROM resorts ORDER BY id DESC"
+  );
+
+  res.render("adminDashboard", {
+    username: req.session.username,
+    resorts: result.rows
+  });
 });
 
 /* =========================
@@ -166,4 +187,6 @@ app.get("/db-test", async (req, res) => {
    SERVER
 ========================= */
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`✅ Server running on ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`✅ Server running on port ${PORT}`)
+);
