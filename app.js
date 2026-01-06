@@ -1,6 +1,9 @@
 const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
+const bcrypt = require("bcrypt");
+const session = require("express-session");
+
 
 dotenv.config();
 
@@ -11,6 +14,14 @@ const app = express();
 // =========================
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(
+  session({
+    secret: "resort_secret_key",
+    resave: false,
+    saveUninitialized: false
+  })
+);
+
 
 // =========================
 // VIEW ENGINE
@@ -46,15 +57,13 @@ app.get("/register", (req, res) => {
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.send("Username and Password required ❌");
-  }
-
   try {
-    const sql = "INSERT INTO users (username, password) VALUES (?, ?)";
-    await db.query(sql, [username, password]);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    res.send("User registered successfully ✅");
+    const sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+    await db.query(sql, [username, hashedPassword]);
+
+    res.send("User registered securely ✅");
   } catch (err) {
     console.error(err);
     res.status(500).send("Registration failed ❌");
@@ -67,19 +76,32 @@ app.post("/login", async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      "SELECT * FROM users WHERE username = ? AND password = ?",
-      [username, password]
+      "SELECT * FROM users WHERE username = ?",
+      [username]
     );
 
-    if (rows.length > 0) {
-      res.send("Login successful ✅");
-    } else {
-      res.send("Invalid credentials ❌");
+    if (rows.length === 0) {
+      return res.send("User not found ❌");
     }
+
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.send("Invalid password ❌");
+    }
+
+    // session start
+    req.session.userId = user.id;
+    req.session.username = user.username;
+
+    res.send("Login successful 🔐");
   } catch (err) {
+    console.error(err);
     res.status(500).send("Login error ❌");
   }
 });
+
 
 // =========================
 // DB TEST
