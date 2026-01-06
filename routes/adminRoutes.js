@@ -7,7 +7,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-/* ===== ADMIN AUTH ===== */
 function isAdmin(req, res, next) {
   if (!req.session || req.session.role !== "admin") {
     return res.redirect("/login");
@@ -15,14 +14,56 @@ function isAdmin(req, res, next) {
   next();
 }
 
-/* ===== TEST ROUTE (VERY IMPORTANT) ===== */
-router.get("/admin/test", (req, res) => {
-  res.send("ADMIN ROUTES WORKING ✅");
+/* =========================
+   ADMIN DASHBOARD
+========================= */
+router.get("/dashboard", isAdmin, async (req, res) => {
+  const result = await pool.query(
+    "SELECT * FROM resorts ORDER BY id DESC"
+  );
+
+  res.render("adminDashboard", {
+    username: req.session.username,
+    resorts: result.rows
+  });
 });
 
-/* ===== ADD RESORT PAGE ===== */
-router.get("/admin/resorts/add", isAdmin, (req, res) => {
+/* =========================
+   ADD RESORT PAGE
+========================= */
+router.get("/resorts/add", isAdmin, (req, res) => {
   res.render("addResort", { error: null });
+});
+
+/* =========================
+   ADD RESORT POST
+========================= */
+router.post("/resorts/add", isAdmin, async (req, res) => {
+  const { name, image_url, price, address, contact } = req.body;
+
+  if (!name || !image_url || !price) {
+    return res.render("addResort", { error: "All fields required" });
+  }
+
+  await pool.query(
+    `INSERT INTO resorts (name, image_url, price, address, contact)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [name, image_url, price, address, contact]
+  );
+
+  res.redirect("/admin/dashboard");
+});
+
+/* =========================
+   DELETE RESORT
+========================= */
+router.get("/resorts/delete/:id", isAdmin, async (req, res) => {
+  await pool.query(
+    "DELETE FROM resorts WHERE id = $1",
+    [req.params.id]
+  );
+
+  res.redirect("/admin/dashboard");
 });
 
 module.exports = router;

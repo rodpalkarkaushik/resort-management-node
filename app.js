@@ -42,6 +42,12 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 /* =========================
+   ROUTES
+========================= */
+const adminRoutes = require("./routes/adminRoutes");
+app.use("/admin", adminRoutes);
+
+/* =========================
    ROOT
 ========================= */
 app.get("/", (req, res) => res.redirect("/login"));
@@ -77,7 +83,7 @@ app.post("/register", async (req, res) => {
 
     res.redirect("/login");
   } catch (err) {
-    console.error("REGISTER ERROR:", err);
+    console.error(err);
     res.render("register", { error: "Server error" });
   }
 });
@@ -98,16 +104,11 @@ app.post("/login", async (req, res) => {
       [username]
     );
 
-    if (result.rows.length === 0) {
+    if (result.rows.length === 0 || result.rows[0].password !== password) {
       return res.render("login", { error: "Invalid credentials" });
     }
 
     const user = result.rows[0];
-
-    if (password !== user.password) {
-      return res.render("login", { error: "Invalid credentials" });
-    }
-
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.role = user.role;
@@ -117,48 +118,22 @@ app.post("/login", async (req, res) => {
       : res.redirect("/dashboard");
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
+    console.error(err);
     res.render("login", { error: "Login failed" });
   }
 });
 
 /* =========================
-   USER DASHBOARD (VIEW RESORTS)
+   USER DASHBOARD
 ========================= */
 app.get("/dashboard", async (req, res) => {
   if (!req.session.userId || req.session.role !== "user") {
     return res.redirect("/login");
   }
 
-  try {
-    const result = await pool.query(
-      "SELECT * FROM resorts ORDER BY id DESC"
-    );
+  const result = await pool.query("SELECT * FROM resorts ORDER BY id DESC");
 
-    res.render("dashboard", {
-      username: req.session.username,
-      resorts: result.rows
-    });
-
-  } catch (err) {
-    console.error("USER DASHBOARD ERROR:", err);
-    res.send("Error loading resorts");
-  }
-});
-
-/* =========================
-   ADMIN DASHBOARD
-========================= */
-app.get("/admin/dashboard", async (req, res) => {
-  if (!req.session.userId || req.session.role !== "admin") {
-    return res.redirect("/login");
-  }
-
-  const result = await pool.query(
-    "SELECT * FROM resorts ORDER BY id DESC"
-  );
-
-  res.render("adminDashboard", {
+  res.render("dashboard", {
     username: req.session.username,
     resorts: result.rows
   });
@@ -169,18 +144,6 @@ app.get("/admin/dashboard", async (req, res) => {
 ========================= */
 app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
-});
-
-/* =========================
-   DB TEST
-========================= */
-app.get("/db-test", async (req, res) => {
-  try {
-    const r = await pool.query("SELECT NOW()");
-    res.json({ status: "OK", time: r.rows[0] });
-  } catch (err) {
-    res.json({ status: "FAILED", error: err.message });
-  }
 });
 
 /* =========================
