@@ -61,9 +61,16 @@ app.post("/register", async (req, res) => {
     );
 
     res.redirect("/login");
+
   } catch (err) {
-    console.error(err);
-    res.send("User already exists");
+    console.error("REGISTER ERROR:", err);
+
+    // ✅ PostgreSQL unique violation error code
+    if (err.code === "23505") {
+      return res.send("Username already exists");
+    }
+
+    res.send("Registration failed");
   }
 });
 
@@ -89,7 +96,6 @@ app.post("/login", async (req, res) => {
 
     const user = result.rows[0];
 
-    // ✅ SIMPLE PASSWORD CHECK
     if (password !== user.password) {
       return res.send("Invalid username or password");
     }
@@ -98,18 +104,18 @@ app.post("/login", async (req, res) => {
     req.session.username = user.username;
     req.session.role = user.role;
 
-    // ROLE BASED REDIRECT
     if (user.role === "admin") {
-      res.redirect("/admin/dashboard");
-    } else {
-      res.redirect("/dashboard");
+      return res.redirect("/admin/dashboard");
     }
 
+    res.redirect("/dashboard");
+
   } catch (err) {
-    console.error(err);
+    console.error("LOGIN ERROR:", err);
     res.send("Login failed");
   }
 });
+
 
 // =========================
 // USER DASHBOARD
