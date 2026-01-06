@@ -1,9 +1,8 @@
 const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
-const bcrypt = require("bcrypt");
 const session = require("express-session");
-
+const bcrypt = require("bcrypt");
 
 dotenv.config();
 
@@ -14,14 +13,19 @@ const app = express();
 // =========================
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// ✅ SESSION (MUST BE BEFORE ROUTES)
 app.use(
   session({
-    secret: "resort_secret_key",
+    secret: "resort-secret-key",
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // MUST be false on Render
+      maxAge: 1000 * 60 * 60 // 1 hour
+    }
   })
 );
-
 
 // =========================
 // VIEW ENGINE
@@ -38,39 +42,34 @@ const db = require("./config/db");
 // ROUTES
 // =========================
 
-// HOME
-app.get("/", (req, res) => {
-  res.send("Resort Management System Backend is Live ✅");
-});
-
-// LOGIN PAGE
-app.get("/login", (req, res) => {
-  res.render("login");
-});
-
-// REGISTER PAGE
+// ---------- REGISTER ----------
 app.get("/register", (req, res) => {
   res.render("register");
 });
 
-// REGISTER POST
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const sql = "INSERT INTO users (username, password) VALUES (?, ?)";
-    await db.query(sql, [username, hashedPassword]);
+    await db.query(
+      "INSERT INTO users (username, password) VALUES (?, ?)",
+      [username, hashedPassword]
+    );
 
-    res.send("User registered securely ✅");
+    res.redirect("/login");
   } catch (err) {
     console.error(err);
-    res.status(500).send("Registration failed ❌");
+    res.send("Registration failed ❌");
   }
 });
 
-// LOGIN POST (OPTIONAL BASIC)
+// ---------- LOGIN ----------
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -88,7 +87,7 @@ app.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.send("Invalid password ❌");
+      return res.send("Wrong password ❌");
     }
 
     // ✅ STORE SESSION
@@ -97,14 +96,17 @@ app.post("/login", async (req, res) => {
       username: user.username
     };
 
-    // ✅ REDIRECT TO DASHBOARD
+    console.log("LOGIN SUCCESS:", req.session.user);
+
     res.redirect("/dashboard");
 
   } catch (err) {
     console.error(err);
-    res.status(500).send("Login failed ❌");
+    res.send("Login failed ❌");
   }
 });
+
+// ---------- DASHBOARD ----------
 app.get("/dashboard", (req, res) => {
   if (!req.session.user) {
     return res.redirect("/login");
@@ -114,30 +116,19 @@ app.get("/dashboard", (req, res) => {
     username: req.session.user.username
   });
 });
+
+// ---------- LOGOUT ----------
 app.get("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/login");
   });
 });
 
-
-
-// =========================
-// DB TEST
-// =========================
-app.get("/db-test", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT 1 AS result");
-    res.json({ status: "SUCCESS", rows });
-  } catch (err) {
-    res.status(500).json({ status: "FAILED", error: err.message });
-  }
-});
-
 // =========================
 // SERVER
 // =========================
 const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
