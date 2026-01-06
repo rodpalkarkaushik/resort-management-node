@@ -91,16 +91,35 @@ app.post("/login", async (req, res) => {
       return res.send("Invalid password ❌");
     }
 
-    // session start
-    req.session.userId = user.id;
-    req.session.username = user.username;
+    // ✅ STORE SESSION
+    req.session.user = {
+      id: user.id,
+      username: user.username
+    };
 
-    res.send("Login successful 🔐");
+    // ✅ REDIRECT TO DASHBOARD
+    res.redirect("/dashboard");
+
   } catch (err) {
     console.error(err);
-    res.status(500).send("Login error ❌");
+    res.status(500).send("Login failed ❌");
   }
 });
+app.get("/dashboard", (req, res) => {
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
+
+  res.render("dashboard", {
+    username: req.session.user.username
+  });
+});
+app.get("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/login");
+  });
+});
+
 
 
 // =========================
