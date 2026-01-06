@@ -2,21 +2,10 @@ const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
 const session = require("express-session");
-const bcrypt = require("bcrypt");
 
 dotenv.config();
 
 const app = express();
-
-// =========================
-// ADMIN MIDDLEWARE
-// =========================
-function isAdmin(req, res, next) {
-  if (!req.session.userId || req.session.role !== "admin") {
-    return res.redirect("/login");
-  }
-  next();
-}
 
 // =========================
 // MIDDLEWARES
@@ -45,7 +34,7 @@ app.set("views", path.join(__dirname, "views"));
 const db = require("./config/db");
 
 // =========================
-// ROOT ROUTE
+// ROOT ROUTE (FIXED)
 // =========================
 app.get("/", (req, res) => {
   res.redirect("/login");
@@ -66,17 +55,15 @@ app.post("/register", async (req, res) => {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     await db.query(
-      "INSERT INTO users (username, password, role) VALUES (?, ?, 'user')",
-      [username, hashedPassword]
+      "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+      [username, password, "user"]
     );
 
     res.redirect("/login");
   } catch (err) {
     console.error(err);
-    res.send("User already exists or error occurred");
+    res.send("User already exists");
   }
 });
 
@@ -101,23 +88,23 @@ app.post("/login", async (req, res) => {
     }
 
     const user = rows[0];
-    const match = await bcrypt.compare(password, user.password);
 
-    if (!match) {
+    // ✅ SIMPLE PASSWORD CHECK (NO BCRYPT)
+    if (password !== user.password) {
       return res.send("Invalid username or password");
     }
 
-    // ✅ SAVE ROLE IN SESSION (CRITICAL FIX)
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.role = user.role;
 
-    // ✅ ADMIN REDIRECT
+    // ✅ ROLE BASED REDIRECT
     if (user.role === "admin") {
-      return res.redirect("/admin/dashboard");
+      res.redirect("/admin/dashboard");
+    } else {
+      res.redirect("/dashboard");
     }
 
-    res.redirect("/dashboard");
   } catch (err) {
     console.error(err);
     res.send("Login failed");
@@ -128,7 +115,7 @@ app.post("/login", async (req, res) => {
 // USER DASHBOARD
 // =========================
 app.get("/dashboard", (req, res) => {
-  if (!req.session.userId) {
+  if (!req.session.userId || req.session.role !== "user") {
     return res.redirect("/login");
   }
 
@@ -140,8 +127,12 @@ app.get("/dashboard", (req, res) => {
 // =========================
 // ADMIN DASHBOARD
 // =========================
-app.get("/admin/dashboard", isAdmin, (req, res) => {
-  res.render("admin_dashboard", {
+app.get("/admin/dashboard", (req, res) => {
+  if (!req.session.userId || req.session.role !== "admin") {
+    return res.redirect("/login");
+  }
+
+  res.render("adminDashboard", {
     username: req.session.username
   });
 });
