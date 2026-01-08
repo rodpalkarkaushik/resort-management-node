@@ -1,18 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
-
-// Middleware to protect user routes
-function ensureLoggedIn(req, res, next) {
-  if (req.session.username) {
-    return next();
-  }
-  req.flash("error_msg", "Please login to continue");
-  res.redirect("/login");
-}
+const { ensureUser } = require("../middlewares/auth");
 
 // Dashboard with dynamic resort images
-router.get("/dashboard", ensureLoggedIn, async (req, res) => {
+router.get("/dashboard", ensureUser, async (req, res) => {
   try {
     const result = await pool.query("SELECT image_url FROM resorts WHERE image_url IS NOT NULL");
     const images = result.rows.map(r => r.image_url);
@@ -27,7 +19,7 @@ router.get("/dashboard", ensureLoggedIn, async (req, res) => {
 });
 
 // View all resorts
-router.get("/user/resorts", ensureLoggedIn, async (req, res) => {
+router.get("/user/resorts", ensureUser, async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM resorts ORDER BY id");
     res.render("userResorts", {
@@ -41,7 +33,7 @@ router.get("/user/resorts", ensureLoggedIn, async (req, res) => {
 });
 
 // Book a resort
-router.get("/user/book/:resortName", ensureLoggedIn, async (req, res) => {
+router.get("/user/book/:resortName", ensureUser, async (req, res) => {
   const { resortName } = req.params;
   const username = req.session.username;
 
@@ -70,7 +62,7 @@ router.get("/user/book/:resortName", ensureLoggedIn, async (req, res) => {
 });
 
 // View user's bookings
-router.get("/user/bookings", ensureLoggedIn, async (req, res) => {
+router.get("/user/bookings", ensureUser, async (req, res) => {
   const username = req.session.username;
 
   try {

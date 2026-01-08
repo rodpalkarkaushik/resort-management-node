@@ -29,7 +29,6 @@ app.use(
 // Flash messages
 app.use(flash());
 app.use((req, res, next) => {
-  // Normalize flash arrays into single strings
   res.locals.success_msg = req.flash("success_msg")[0] || null;
   res.locals.error_msg = req.flash("error_msg")[0] || null;
   res.locals.username = req.session.username || null;
@@ -45,13 +44,24 @@ app.use(require("./routes/authRoutes"));
 app.use(require("./routes/userRoutes"));
 app.use(require("./routes/adminRoutes"));
 
-/* ROOT – Public Homepage */
+/* ROOT – Redirect based on role */
 app.get("/", async (req, res) => {
   try {
+    // If logged in as admin → go to admin dashboard
+    if (req.session.role === "admin") {
+      return res.redirect("/admin/dashboard");
+    }
+
+    // If logged in as user → go to user dashboard
+    if (req.session.role === "user") {
+      return res.redirect("/dashboard");
+    }
+
+    // Otherwise show public homepage
     const result = await pool.query("SELECT * FROM resorts ORDER BY id");
     res.render("home", {
       resorts: result.rows,
-      username: req.session.username || null
+      username: null
     });
   } catch (err) {
     console.error(err);
