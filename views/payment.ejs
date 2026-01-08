@@ -1,0 +1,11 @@
+<h2>Confirm Booking</h2>
+
+<p>Resort: <%= resort.name %></p>
+<p>Price: ₹<%= resort.price %></p>
+
+<form action="/user/book" method="POST">
+  <input type="hidden" name="resort_name" value="<%= resort.name %>">
+  <input type="hidden" name="price" value="<%= resort.price %>">
+
+  <button type="submit">Pay & Book</button>
+</form>

@@ -1,39 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin – View Resorts</title>
+  <title>Admin – Resorts</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(to right, #f8f9fa, #e9ecef);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .carousel img {
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .price-badge {
+      font-size: 1rem;
+      background: #198754;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
 
-<h2>Welcome, <%= username %></h2>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/admin/dashboard">🏝️ Luxury Resorts Admin</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/admin/resorts/add">Add Resort</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
 
-<a href="/admin/resorts/add">➕ Add Resort</a>
-<br><br>
+<!-- Page Content -->
+<div class="container mt-5">
+  <h2 class="text-center mb-4">Resorts Management</h2>
 
-<table border="1">
-  <tr>
-    <th>Name</th>
-    <th>Price</th>
-    <th>Image</th>
-    <th>Action</th>
-  </tr>
+  <% if (resorts.length === 0) { %>
+    <div class="alert alert-warning text-center">No resorts found</div>
+  <% } else { %>
+    <div class="row">
+      <% resorts.forEach(r => { %>
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="card h-100">
+            <!-- Resort Carousel -->
+            <div id="carouselAdmin<%= r.id %>" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
+              <div class="carousel-inner">
+                <% [r.image_url, r.image_url_2, r.image_url_3, r.image_url_4].forEach((url, index) => { if (url) { %>
+                  <div class="carousel-item <%= index === 0 ? 'active' : '' %>">
+                    <img src="<%= url %>" class="d-block w-100" alt="Resort Image">
+                  </div>
+                <% } }) %>
+              </div>
+              <button class="carousel-control-prev" type="button" data-bs-target="#carouselAdmin<%= r.id %>" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#carouselAdmin<%= r.id %>" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+              </button>
+            </div>
 
-  <% resorts.forEach(resort => { %>
-    <tr>
-      <td><%= resort.name %></td>
-      <td>₹<%= resort.price %></td>
-      <td>
-        <img src="<%= resort.image_url %>" width="120">
-      </td>
-      <td>
-        <a href="/admin/resorts/delete/<%= resort.id %>">❌ Delete</a>
-      </td>
-    </tr>
-  <% }) %>
-</table>
+            <!-- Resort Info -->
+            <div class="card-body">
+              <h5 class="card-title"><%= r.name %></h5>
+              <p class="card-text"><%= r.description %></p>
+              <p><span class="price-badge">₹<%= r.price %></span></p>
+              <p><strong>Address:</strong> <%= r.address %></p>
+              <p><strong>Contact:</strong> <%= r.contact %></p>
+            </div>
 
-<br>
-<a href="/admin/dashboard">⬅ Back</a>
+            <!-- Actions -->
+            <div class="card-footer text-center">
+              <a href="/admin/resorts/edit/<%= r.id %>" class="btn btn-sm btn-primary me-2">Edit</a>
+              <a href="/admin/resorts/delete/<%= r.id %>" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
 
+  <div class="text-center mt-3">
+    <a href="/admin/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

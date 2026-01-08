@@ -2,23 +2,135 @@
 <html>
 <head>
   <title>Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .bg-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .bg-container img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+
+    .bg-container img.active {
+      opacity: 1;
+    }
+
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .dashboard-content {
+      padding-top: 80px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Welcome Admin</h1>
 
-  <p>Hello, <%= username %></p>
+<!-- Background Slideshow -->
+<div class="bg-container">
+  <% if (resortImages && resortImages.length > 0) { %>
+    <% resortImages.forEach((url, index) => { %>
+      <img src="<%= url %>" class="<%= index === 0 ? 'active' : '' %>">
+    <% }) %>
+  <% } else { %>
+    <!-- Fallback static images -->
+    <img src="/images/bg1.jpg" class="active">
+    <img src="/images/bg2.jpg">
+    <img src="/images/bg3.jpg">
+  <% } %>
+</div>
 
-  <hr>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">🏝️ Luxury Resorts Admin</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/admin/resorts/add">Add Resort</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/resorts">View Resorts</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/bookings">View Bookings</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
 
-  <h2>Resort Management</h2>
+<!-- Dashboard Content -->
+<div class="container dashboard-content">
+  <h2 class="text-center text-white mb-4">Welcome Admin 🎉</h2>
 
-  <ul>
-    <li><a href="/admin/resorts/add">Add Resort</a></li>
-    <li><a href="/admin/resorts">View Resorts</a></li>
-  </ul>
+  <div class="row justify-content-center">
+    <div class="col-md-3 mb-4">
+      <div class="card text-center p-4 bg-light">
+        <h5 class="card-title">Add Resort</h5>
+        <p class="card-text">Add new luxurious resorts to the system.</p>
+        <a href="/admin/resorts/add" class="btn btn-primary">Add Resort</a>
+      </div>
+    </div>
 
-  <br>
+    <div class="col-md-3 mb-4">
+      <div class="card text-center p-4 bg-light">
+        <h5 class="card-title">View Resorts</h5>
+        <p class="card-text">Manage and update existing resorts.</p>
+        <a href="/admin/resorts" class="btn btn-success">View Resorts</a>
+      </div>
+    </div>
 
-  <a href="/logout">Logout</a>
+    <div class="col-md-3 mb-4">
+      <div class="card text-center p-4 bg-light">
+        <h5 class="card-title">View Bookings</h5>
+        <p class="card-text">Check and manage all user bookings.</p>
+        <a href="/admin/bookings" class="btn btn-warning">View Bookings</a>
+      </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+      <div class="card text-center p-4 bg-light">
+        <h5 class="card-title">Logout</h5>
+        <p class="card-text">End your admin session securely.</p>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Background Slideshow Script -->
+<script>
+  const images = document.querySelectorAll('.bg-container img');
+  let current = 0;
+
+  setInterval(() => {
+    images[current].classList.remove('active');
+    current = (current + 1) % images.length;
+    images[current].classList.add('active');
+  }, 3000);
+</script>
 </body>
 </html>

@@ -3,153 +3,67 @@ const path = require("path");
 const dotenv = require("dotenv");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
-const { Pool } = require("pg");
+const flash = require("connect-flash");
 
 dotenv.config();
 const app = express();
 
-/* =========================
-   DATABASE (SUPABASE)
-========================= */
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+const pool = require("./config/db");
 
-/* =========================
-   MIDDLEWARES
-========================= */
+/* MIDDLEWARE */
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(
   session({
     store: new pgSession({
-      pool: pool,
+      pool,
       tableName: "session"
     }),
-    secret: process.env.SESSION_SECRET || "secret123",
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }
+    saveUninitialized: false
   })
 );
 
-/* =========================
-   VIEW ENGINE
-========================= */
+// Flash messages
+app.use(flash());
+app.use((req, res, next) => {
+  // Normalize flash arrays into single strings
+  res.locals.success_msg = req.flash("success_msg")[0] || null;
+  res.locals.error_msg = req.flash("error_msg")[0] || null;
+  res.locals.username = req.session.username || null;
+  next();
+});
+
+/* VIEW ENGINE */
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-/* =========================
-   ROUTES
-========================= */
-const adminRoutes = require("./routes/adminRoutes");
-app.use("/admin", adminRoutes);
+/* ROUTES */
+app.use(require("./routes/authRoutes"));
+app.use(require("./routes/userRoutes"));
+app.use(require("./routes/adminRoutes"));
 
-/* =========================
-   ROOT
-========================= */
-app.get("/", (req, res) => res.redirect("/login"));
-
-/* =========================
-   REGISTER
-========================= */
-app.get("/register", (req, res) => {
-  res.render("register", { error: null });
-});
-
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.render("register", { error: "All fields required" });
-  }
-
+/* ROOT – Public Homepage */
+app.get("/", async (req, res) => {
   try {
-    const existing = await pool.query(
-      "SELECT id FROM users WHERE username = $1",
-      [username]
-    );
-
-    if (existing.rows.length > 0) {
-      return res.render("register", { error: "Username already exists" });
-    }
-
-    await pool.query(
-      "INSERT INTO users (username, password, role) VALUES ($1, $2, 'user')",
-      [username, password]
-    );
-
-    res.redirect("/login");
+    const result = await pool.query("SELECT * FROM resorts ORDER BY id");
+    res.render("home", {
+      resorts: result.rows,
+      username: req.session.username || null
+    });
   } catch (err) {
     console.error(err);
-    res.render("register", { error: "Server error" });
+    res.status(500).send("Error loading homepage");
   }
 });
 
-/* =========================
-   LOGIN
-========================= */
-app.get("/login", (req, res) => {
-  res.render("login", { error: null });
-});
-
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-
-  try {
-    const result = await pool.query(
-      "SELECT * FROM users WHERE username = $1",
-      [username]
-    );
-
-    if (result.rows.length === 0 || result.rows[0].password !== password) {
-      return res.render("login", { error: "Invalid credentials" });
-    }
-
-    const user = result.rows[0];
-    req.session.userId = user.id;
-    req.session.username = user.username;
-    req.session.role = user.role;
-
-    user.role === "admin"
-      ? res.redirect("/admin/dashboard")
-      : res.redirect("/dashboard");
-
-  } catch (err) {
-    console.error(err);
-    res.render("login", { error: "Login failed" });
-  }
-});
-
-/* =========================
-   USER DASHBOARD
-========================= */
-app.get("/dashboard", async (req, res) => {
-  if (!req.session.userId || req.session.role !== "user") {
-    return res.redirect("/login");
-  }
-
-  const result = await pool.query("SELECT * FROM resorts ORDER BY id DESC");
-
-  res.render("dashboard", {
-    username: req.session.username,
-    resorts: result.rows
-  });
-});
-
-/* =========================
-   LOGOUT
-========================= */
+/* LOGOUT */
 app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
-/* =========================
-   SERVER
-========================= */
+/* SERVER */
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () =>
-  console.log(`✅ Server running on port ${PORT}`)
-);
+app.listen(PORT, () => console.log("✅ Server running on port", PORT));
