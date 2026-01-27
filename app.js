@@ -7,7 +7,6 @@ const flash = require("connect-flash");
 
 dotenv.config();
 const app = express();
-
 const pool = require("./config/db");
 
 /* MIDDLEWARE */
@@ -62,11 +61,7 @@ app.get("/", async (req, res) => {
 
     let resorts = [];
     try {
-      const resultPromise = pool.query("SELECT * FROM resorts ORDER BY id");
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("DB timeout")), 15000)
-      );
-      const result = await Promise.race([resultPromise, timeoutPromise]);
+      const result = await pool.query("SELECT * FROM resorts ORDER BY id");
       resorts = result.rows || [];
     } catch (dbErr) {
       console.error("Homepage DB query failed:", dbErr.message);
@@ -83,16 +78,12 @@ app.get("/", async (req, res) => {
   }
 });
 
-/* BOOKINGS PAGE – resilient query */
+/* BOOKINGS PAGE */
 app.get("/bookings", async (req, res) => {
   try {
     let bookings = [];
     try {
-      const resultPromise = pool.query("SELECT * FROM bookings ORDER BY id DESC");
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("DB timeout")), 15000)
-      );
-      const result = await Promise.race([resultPromise, timeoutPromise]);
+      const result = await pool.query("SELECT * FROM bookings ORDER BY id DESC");
       bookings = result.rows || [];
     } catch (dbErr) {
       console.error("Bookings query failed:", dbErr.message);
