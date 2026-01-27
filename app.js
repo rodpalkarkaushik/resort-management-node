@@ -14,13 +14,13 @@ const pool = require("./config/db");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Session store with fallback if DB is unreachable
+// Session store with fallback if DB is slow/unreachable
 let store;
 try {
   store = new pgSession({ pool, tableName: "session" });
 } catch (err) {
   console.error("Session store init failed, using memory:", err.message);
-  store = undefined; // fallback to memory
+  store = undefined;
 }
 
 app.use(
@@ -62,9 +62,12 @@ app.get("/", async (req, res) => {
 
     let resorts = [];
     try {
-      // Query resorts with extended timeout handling
-      const result = await pool.query("SELECT * FROM resorts ORDER BY id");
-      resorts = result.rows;
+      const resultPromise = pool.query("SELECT * FROM resorts ORDER BY id");
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("DB timeout")), 15000)
+      );
+      const result = await Promise.race([resultPromise, timeoutPromise]);
+      resorts = result.rows || [];
     } catch (dbErr) {
       console.error("Homepage DB query failed:", dbErr.message);
     }
@@ -80,6 +83,31 @@ app.get("/", async (req, res) => {
   }
 });
 
+/* BOOKINGS PAGE – resilient query */
+app.get("/bookings", async (req, res) => {
+  try {
+    let bookings = [];
+    try {
+      const resultPromise = pool.query("SELECT * FROM bookings ORDER BY id DESC");
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("DB timeout")), 15000)
+      );
+      const result = await Promise.race([resultPromise, timeoutPromise]);
+      bookings = result.rows || [];
+    } catch (dbErr) {
+      console.error("Bookings query failed:", dbErr.message);
+    }
+
+    res.render("bookings", {
+      bookings,
+      error_msg: bookings.length === 0 ? "Bookings unavailable right now." : null
+    });
+  } catch (err) {
+    console.error("Error loading bookings:", err.message);
+    res.status(500).send("Error loading bookings");
+  }
+});
+
 /* LOGOUT */
 app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
@@ -92,7 +120,7 @@ app.get("/health", async (req, res) => {
     res.send("✅ DB connected");
   } catch (err) {
     console.error("Healthcheck failed:", err.message);
-    res.status(500).send("❌ DB connection failed");
+    res.status(500).send("❌ DB connection failed: " + err.message);
   }
 });
 
